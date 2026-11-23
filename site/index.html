@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ספריית הפרשות</title>
+<meta name="theme-color" content="#1f2a44">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f0e4; --card: #fffaf0; --ink: #1f2a44; --muted: #5f6173;
+    --accent: #8f6416; --line: #e3d8c0; --empty: #efe6d2; --on-accent: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121829; --card: #1a2236; --ink: #efe8d8; --muted: #98a0b6;
+      --accent: #d9a94a; --line: #2a3550; --empty: #161d30; --on-accent: #121829;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Heebo", system-ui, sans-serif; line-height: 1.6;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 56px; }
+  h1, h2, h3, .serif { font-family: "Frank Ruhl Libre", "Times New Roman", serif; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .top h1 { font-size: 2.1rem; margin: 8px 0 0; line-height: 1.2; }
+  .top .sub { margin: 4px 0 0; color: var(--muted); }
+
+  .progress { margin: 18px 0 6px; }
+  .bar { height: 8px; border-radius: 99px; background: var(--empty); border: 1px solid var(--line); overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+  .count { margin: 6px 0 0; font-size: .85rem; color: var(--muted); }
+
+  .note, .latest {
+    display: block; margin: 18px 0; padding: 16px; border-radius: 16px;
+    background: var(--card); border: 1px solid var(--line); text-decoration: none;
+  }
+  .note { color: var(--muted); border-style: dashed; }
+  .latest { border-color: var(--accent); }
+  .latest .k { font-size: .78rem; color: var(--accent); font-weight: 700; letter-spacing: .02em; }
+  .latest .t { font-family: "Frank Ruhl Libre", serif; font-size: 1.5rem; font-weight: 700; margin: 2px 0; }
+  .latest .x { color: var(--muted); font-size: .95rem; }
+
+  .search {
+    width: 100%; font: inherit; padding: 12px 14px; margin: 6px 0 4px;
+    border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  }
+
+  section { margin-top: 26px; }
+  h2 { font-size: 1.35rem; margin: 0 0 10px; }
+  h2 .c { font-family: "Heebo", sans-serif; font-size: .8rem; color: var(--muted); font-weight: 400; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+  .chip {
+    display: flex; flex-direction: column; justify-content: center; min-height: 58px;
+    padding: 9px 12px; border-radius: 12px; border: 1px solid var(--line); text-decoration: none;
+  }
+  .chip .n { font-weight: 500; }
+  .chip .d { font-size: .75rem; color: var(--muted); }
+  .chip.filled { background: var(--card); border-color: var(--accent); }
+  .chip.filled .n { font-weight: 700; }
+  .chip.empty { background: var(--empty); color: var(--muted); border-style: dashed; }
+
+  .row { display: block; padding: 14px 0; border-bottom: 1px solid var(--line); text-decoration: none; }
+  .row .t { font-family: "Frank Ruhl Libre", serif; font-weight: 700; font-size: 1.15rem; }
+  .row .x { color: var(--muted); font-size: .9rem; }
+  .none { color: var(--muted); padding: 18px 0; }
+
+  .back { display: inline-block; margin: 4px 0 14px; color: var(--muted); text-decoration: none; }
+  article h1 { font-size: 2.3rem; line-height: 1.2; margin: 0; }
+  .meta { color: var(--muted); font-size: .85rem; margin: 6px 0 22px; }
+  .body p {
+    font-family: "Frank Ruhl Libre", serif; font-size: 1.22rem; line-height: 1.95;
+    margin: 0 0 1.1em; white-space: pre-line;
+  }
+  .xref { color: var(--accent); text-decoration: underline dotted; text-underline-offset: 4px; text-decoration-thickness: 2px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+  .btn {
+    font: inherit; padding: 10px 18px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent);
+  }
+  .btn.ghost { background: transparent; color: var(--ink); }
+
+  .deepwrap { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--line); }
+  .deepbtn { width: 100%; text-align: center; }
+  .deep { margin-top: 22px; }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+  .tocitem {
+    padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card);
+    text-decoration: none; font-size: .9rem;
+  }
+  .dsec { margin-top: 30px; scroll-margin-top: 12px; }
+  .dsec h3 { font-size: 1.5rem; line-height: 1.3; margin: 0 0 10px; }
+  .dsec .ref { font-family: "Heebo", sans-serif; font-size: .8rem; color: var(--muted); font-weight: 400; margin-inline-start: .7em; }
+  .dsec p { font-family: "Frank Ruhl Libre", serif; font-size: 1.12rem; line-height: 1.9; margin: 0 0 1em; }
+  .dsec .note2 {
+    margin: 0 0 12px; padding: 12px 14px; border-radius: 10px; background: var(--empty);
+    font-family: "Frank Ruhl Libre", serif; font-size: 1.05rem; line-height: 1.8;
+  }
+  .nk { font-family: "Heebo", sans-serif; font-size: .75rem; font-weight: 700; color: var(--accent); margin-inline-end: .6em; letter-spacing: .02em; }
+  .up { font-size: .85rem; color: var(--muted); text-decoration: none; }
+</style>
+</head>
+<body>
+<main class="wrap" id="app"><p class="none">טוען…</p></main>
+
+<script src="library.js"></script>
+<script>
+  "use strict";
+  const $app = document.getElementById("app");
+  let entries = [];
+
+  const MARK = /\[\[([a-z0-9-]+)\|([^\]]+)\]\]/g;
+  const plain = (s) => String(s || "").replace(MARK, "$2");
+
+  function h(tag, props, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (k === "class") el.className = v;
+      else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v);
+    }
+    for (const kid of kids.flat()) if (kid != null) el.append(kid.nodeType ? kid : document.createTextNode(kid));
+    return el;
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return "";
+    return new Date(iso + "T12:00:00").toLocaleDateString("he-IL", { day: "numeric", month: "long", year: "numeric" });
+  }
+
+  function fmtRef(r) {
+    const m = /^(\d+):(\d+)-(\d+):(\d+)$/.exec(r || "");
+    if (!m) return r || "";
+    return m[1] === m[3] ? `${m[1]}:${m[2]}–${m[4]}` : `${m[1]}:${m[2]}–${m[3]}:${m[4]}`;
+  }
+
+  function excerpt(e) {
+    const first = plain(String(e.summary || "").split(/\n{2,}/)[0]).trim();
+    return first.length > 120 ? first.slice(0, 120).trim() + "…" : first;
+  }
+
+  const href = (e) => "#" + e.id;
+  const secHref = (e, s) => "#" + e.id + "-" + s;
+
+  function slotChip(s) {
+    if (s.entry) {
+      return h("a", { class: "chip filled", href: href(s.entry) },
+        h("span", { class: "n" }, s.name), h("span", { class: "d" }, fmtDate(s.entry.date)));
+    }
+    return h("div", { class: "chip empty", "aria-disabled": "true" },
+      h("span", { class: "n" }, s.name), h("span", { class: "d" }, "בקרוב"));
+  }
+
+  function matches(e, needle) {
+    return e.he.includes(needle) || plain(e.summary).includes(needle) ||
+      (e.sections || []).some((s) => s.title.includes(needle) || s.text.includes(needle));
+  }
+
+  function fillResults(q) {
+    const box = document.getElementById("results");
+    const needle = q.trim();
+    if (needle) {
+      const found = entries.filter((e) => matches(e, needle));
+      box.replaceChildren(...(found.length
+        ? found.map((e) => h("a", { class: "row", href: href(e) },
+            h("div", { class: "t" }, "פרשת " + e.he), h("div", { class: "x" }, excerpt(e))))
+        : [h("p", { class: "none" }, "לא נמצאו פרשות מתאימות.")]));
+      return;
+    }
+    const lib = ParshaLib.buildLibrary(entries);
+    const sections = lib.books.map((b) => h("section", {},
+      h("h2", {}, b.name, h("span", { class: "c" }, `  ${b.slots.filter((s) => s.entry).length}/${b.slots.length}`)),
+      h("div", { class: "grid" }, b.slots.map(slotChip))));
+    if (lib.extra.length) {
+      sections.push(h("section", {}, h("h2", {}, "נוספות"),
+        h("div", { class: "grid" }, lib.extra.map((e) => slotChip({ name: e.he, entry: e })))));
+    }
+    box.replaceChildren(...sections);
+  }
+
+  function renderLibrary() {
+    const lib = ParshaLib.buildLibrary(entries);
+    const pct = Math.round((lib.filled / lib.total) * 100);
+    const latest = entries.slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
+    const search = h("input", {
+      class: "search", type: "search", placeholder: "חיפוש בפרשות שבספרייה", "aria-label": "חיפוש",
+      oninput: (ev) => fillResults(ev.target.value),
+    });
+    $app.replaceChildren(
+      h("header", { class: "top" },
+        h("h1", {}, "ספריית הפרשות"),
+        h("p", { class: "sub" }, "פירוש קצר ועם חיוך לכל פרשת שבוע, והעמקה למי שרוצה")),
+      h("div", { class: "progress" },
+        h("div", { class: "bar" }, h("span", { style: `width:${pct}%` })),
+        h("p", { class: "count" }, `${lib.filled} מתוך ${lib.total} פרשות בספרייה`)),
+      latest
+        ? h("a", { class: "latest", href: href(latest) },
+            h("div", { class: "k" }, "הפירוש האחרון"),
+            h("div", { class: "t" }, "פרשת " + latest.he),
+            h("div", { class: "x" }, excerpt(latest)))
+        : h("div", { class: "note" }, "הספרייה עדיין ריקה. הפירוש הראשון יופיע בשבוע הקרוב, ומשם היא תתמלא פרשה אחר פרשה."),
+      latest ? search : null,
+      h("div", { id: "results" }));
+    fillResults("");
+  }
+
+  async function shareEntry(e, btn) {
+    const text = `📖 פרשת ${e.he}\n\n${plain(e.summary)}`;
+    if (navigator.share) {
+      try { await navigator.share({ text }); return; }
+      catch (err) { if (err && err.name === "AbortError") return; }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      const old = btn.textContent;
+      btn.textContent = "הועתק ✓";
+      setTimeout(() => (btn.textContent = old), 1800);
+    } catch (err) {
+      window.prompt("העתק את הטקסט:", text);
+    }
+  }
+
+  // הסיכום הקצר: סימון [[מזהה|ביטוי]] הופך לקישור לנושא בהעמקה
+  function linked(e, text) {
+    const ids = new Set((e.sections || []).map((s) => s.id));
+    const out = [];
+    let last = 0;
+    for (const m of text.matchAll(MARK)) {
+      out.push(text.slice(last, m.index));
+      out.push(ids.has(m[1]) ? h("a", { class: "xref", href: secHref(e, m[1]) }, m[2]) : m[2]);
+      last = m.index + m[0].length;
+    }
+    out.push(text.slice(last));
+    return out;
+  }
+
+  function deepPara(p) {
+    if (p.startsWith("להעמקה:")) {
+      return h("div", { class: "note2" }, h("span", { class: "nk" }, "להעמקה"), p.slice(7).trim());
+    }
+    return h("p", {}, p);
+  }
+
+  function renderEntry(e, secId) {
+    shown = e.id;
+    const secs = e.sections || [];
+    const paras = String(e.summary || "").split(/\n{2,}/).map((p) => h("p", {}, linked(e, p.trim())));
+    const children = [
+      h("a", { class: "back", href: "#" }, "← לספרייה"),
+      h("h1", {}, "פרשת " + e.he),
+      h("p", { class: "meta" },
+        fmtDate(e.date), " · ",
+        `סיכום של ${e.summary_words} מילים מתוך ${Number(e.words).toLocaleString("he-IL")} בפרשה`, " · ",
+        h("span", { dir: "ltr" }, e.ref)),
+      h("div", { class: "body" }, paras),
+      h("div", { class: "actions" },
+        h("button", { class: "btn ghost", type: "button", onclick: (ev) => shareEntry(e, ev.currentTarget) }, "שתף את הסיכום"),
+        h("a", { class: "btn ghost", href: "#", style: "text-decoration:none" }, "לספרייה")),
+    ];
+
+    if (secs.length) {
+      const box = h("div", { class: "deep", id: "deep" },
+        h("nav", { class: "toc", "aria-label": "נושאי ההעמקה" },
+          secs.map((s) => h("a", { class: "tocitem", href: secHref(e, s.id) }, s.title))),
+        secs.map((s) => h("section", { class: "dsec", id: "sec-" + s.id },
+          h("h3", {}, s.title, s.ref ? h("span", { class: "ref", dir: "ltr" }, fmtRef(s.ref)) : null),
+          String(s.text || "").split(/\n{2,}/).map((p) => deepPara(p.trim())),
+          h("a", { class: "up", href: href(e) }, "↑ חזרה לסיכום"))));
+      box.hidden = !secId;
+      const label = () => (box.hidden ? `להעמקה בפרשה · ${secs.length} נושאים` : "הסתר את ההעמקה");
+      const btn = h("button", {
+        class: "btn deepbtn", type: "button", "aria-expanded": String(!box.hidden), "aria-controls": "deep",
+        onclick: () => {
+          box.hidden = !box.hidden;
+          btn.setAttribute("aria-expanded", String(!box.hidden));
+          btn.textContent = label();
+        },
+      }, label());
+      box.openDeep = () => {
+        box.hidden = false;
+        btn.setAttribute("aria-expanded", "true");
+        btn.textContent = label();
+      };
+      children.push(h("div", { class: "deepwrap" }, btn, box));
+    }
+    $app.replaceChildren(h("article", {}, children));
+  }
+
+  // מזהה בכתובת: #vayishlach לפרשה, #vayishlach-shechem לנושא בהעמקה
+  let shown = null;
+
+  function place(el) {
+    if (!el) { window.scrollTo(0, 0); return; }
+    window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - 12));
+  }
+
+  function route() {
+    const raw = location.hash.replace(/^#/, "");
+    let e = null, sec = null;
+    if (raw) {
+      for (const x of entries.slice().sort((a, b) => b.id.length - a.id.length)) {
+        if (raw === x.id) { e = x; break; }
+        if (raw.startsWith(x.id + "-")) { e = x; sec = raw.slice(x.id.length + 1); break; }
+      }
+    }
+    document.title = e ? `פרשת ${e.he} · ספריית הפרשות` : "ספריית הפרשות";
+    if (!e) { shown = null; renderLibrary(); window.scrollTo(0, 0); return; }
+    if (sec && !(e.sections || []).some((s) => s.id === sec)) sec = null;
+    if (shown !== e.id) {
+      renderEntry(e, sec);
+    } else {
+      const box = document.getElementById("deep");
+      if (sec && box && box.hidden) box.openDeep();
+    }
+    // גלילה מיידית (לא חלקה), ושוב אחרי שהפריסה מתייצבת ואחרי טעינת הגופנים
+    const go = () => place(sec ? document.getElementById("sec-" + sec) : null);
+    go();
+    requestAnimationFrame(go);
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => { if (location.hash.replace(/^#/, "") === raw) go(); });
+    }
+  }
+
+  // לחיצה על קישור שכבר מצביע על המקום הנוכחי לא מפעילה hashchange, אז מגללים ידנית
+  document.addEventListener("click", (ev) => {
+    const a = ev.target.closest && ev.target.closest("a[href^='#']");
+    if (a && a.getAttribute("href") === location.hash) { ev.preventDefault(); route(); }
+  });
+
+  async function init() {
+    try {
+      const r = await fetch("parshiot.json", { cache: "no-cache" });
+      if (!r.ok) throw new Error(r.status);
+      entries = await r.json();
+    } catch (err) {
+      $app.replaceChildren(h("p", { class: "none" }, "לא ניתן לטעון את הספרייה כרגע. נסה שוב כשיש חיבור לאינטרנט."));
+      return;
+    }
+    window.addEventListener("hashchange", route);
+    route();
+  }
+
+  init();
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+</script>
+</body>
+</html>
