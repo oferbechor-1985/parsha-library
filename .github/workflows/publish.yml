@@ -1,0 +1,60 @@
+name: Publish weekly parsha
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Publish now regardless of the configured day"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate this week's commentary
+        run: python parsha_digest.py
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FORCE: ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '1' || '0' }}
+
+      - name: Save the new entry to the repo
+        run: |
+          git config user.name "parsha-bot"
+          git config user.email "parsha-bot@users.noreply.github.com"
+          git add site/parshiot.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Add weekly parsha commentary"
+            git push
+          fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
