@@ -6,7 +6,7 @@
   2. סיכום קצר (כ-10%) עם הומור מכבד, שמקשר לנושאי ההעמקה
 
 הרצה:
-  python parsha_digest.py               # מפרסם רק אם היום הוא publish_day שהוגדר ב-config.json
+  python parsha_digest.py               # מפרסם רק ביום publish_day ואחרי השעה publish_hour (שעון ישראל) שהוגדרו ב-config.json
   python parsha_digest.py --force       # מפרסם עכשיו בלי קשר ליום
   python parsha_digest.py --dry-run     # מדפיס למסך בלבד, לא שומר
   python parsha_digest.py --regenerate  # מחליף פירוש קיים של פרשת השבוע
@@ -279,9 +279,13 @@ def main():
     regenerate = "--regenerate" in sys.argv
     now = datetime.now(TZ)
     today = now.strftime("%A").lower()
-    if not (dry or force or regenerate) and today != cfg["publish_day"].strip().lower():
-        print(f"היום {today}, יום הפרסום הוא {cfg['publish_day']} — מדלג.")
-        return 0
+    if not (dry or force or regenerate):
+        if today != cfg["publish_day"].strip().lower():
+            print(f"היום {today}, יום הפרסום הוא {cfg['publish_day']} — מדלג.")
+            return 0
+        if now.hour < int(cfg.get("publish_hour", 0)):
+            print(f"השעה {now.strftime('%H:%M')} בישראל, שעת הפרסום היא {cfg['publish_hour']}:00 — מדלג.")
+            return 0
 
     parsha = get_parsha(cfg)
     he_name = re.sub(r"^פרשת\s+", "", parsha["he"]) or parsha["en"]

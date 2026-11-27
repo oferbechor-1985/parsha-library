@@ -1,5 +1,6 @@
 {
   "publish_day": "Friday",
+  "publish_hour": 11,
   "diaspora": false,
   "summary_ratio": 0.10,
   "deep_ratio": 0.30

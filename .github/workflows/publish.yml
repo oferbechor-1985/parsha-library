@@ -2,7 +2,9 @@ name: Publish weekly parsha
 
 on:
   schedule:
-    - cron: "0 5 * * *"
+    # שתי שעות UTC כדי לכסות שעון קיץ וחורף בישראל; הסקריפט מפרסם רק אחרי publish_hour ופעם אחת לפרשה
+    - cron: "0 8 * * *"
+    - cron: "0 9 * * *"
   push:
     branches: [main]
   workflow_dispatch:
