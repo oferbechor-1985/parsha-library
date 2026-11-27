@@ -122,19 +122,27 @@ def fetch_parsha_verses(ref):
 
 
 # ---------- Claude ----------
-def ask_claude(system, messages, max_tokens=2500):
-    payload = {"model": MODEL, "max_tokens": max_tokens, "system": system, "messages": messages}
-    d = http(
-        "https://api.anthropic.com/v1/messages",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "x-api-key": os.environ["ANTHROPIC_API_KEY"],
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        method="POST",
-    )
-    return "".join(b.get("text", "") for b in d["content"] if b.get("type") == "text").strip()
+def ask_claude(system, messages, max_tokens=8000):
+    """שולח בקשה ל-Claude. אם התשובה נחתכה (נגמר תקציב הטוקנים), מנסה שוב עם תקציב כפול."""
+    budget = max_tokens
+    for attempt in range(3):
+        payload = {"model": MODEL, "max_tokens": budget, "system": system, "messages": messages}
+        d = http(
+            "https://api.anthropic.com/v1/messages",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "x-api-key": os.environ["ANTHROPIC_API_KEY"],
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            method="POST",
+        )
+        text = "".join(b.get("text", "") for b in d["content"] if b.get("type") == "text").strip()
+        if d.get("stop_reason") != "max_tokens":
+            return text
+        print(f"התשובה נחתכה ב-{budget} טוקנים ({count_words(text)} מילים), מנסה שוב עם תקציב כפול")
+        budget = min(budget * 2, 32000)
+    raise RuntimeError("התשובה של Claude נחתכה שוב ושוב (stop_reason=max_tokens)")
 
 
 # ----- העמקה: סיכום ארוך לפי נושאים -----
@@ -181,7 +189,7 @@ def write_deep(parsha_he, numbered_text, words, ratio):
     messages = [{"role": "user", "content": f"פרשת {parsha_he} ({words} מילים בנוסח המקור):\n\n{numbered_text}"}]
     best = []
     for _ in range(3):
-        raw = ask_claude(system, messages, max_tokens=8000)
+        raw = ask_claude(system, messages, max_tokens=16000)
         sections = parse_sections(raw)
         n = deep_word_count(sections)
         print(f"העמקה: {len(sections)} נושאים, {n} מילים (יעד {target}, טווח {lo}-{hi})")
@@ -251,6 +259,9 @@ def write_summary(parsha_he, text, ratio, sections):
             {"role": "assistant", "content": draft},
             {"role": "user", "content": ". ".join(notes) + ". תקן ושמור על אותם כללים. החזר רק את הפירוש."},
         ]
+    final_words = count_words(plain(draft))
+    if final_words < target * 0.5:
+        raise RuntimeError(f"הסיכום הקצר קצר מדי ({final_words} מילים, יעד {target}). לא נשמר כלום, אפשר להריץ שוב.")
     return clean_links(draft, set(ids)), words, target
 
 
