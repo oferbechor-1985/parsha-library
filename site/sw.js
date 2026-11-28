@@ -1,6 +1,6 @@
 // רשת קודם (כדי שפירושים חדשים יופיעו מיד), ומטמון כגיבוי כשאין חיבור.
-const CACHE = "parsha-library-v1";
-const SHELL = ["./", "index.html", "library.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "parshiot.json"];
+const CACHE = "parsha-library-v2";
+const SHELL = ["./", "index.html", "library.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png", "icon.svg", "parshiot.json"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));
