@@ -90,6 +90,15 @@ def clean_hebrew(s):
     return re.sub(r"\s+", " ", s).strip()
 
 
+def clean_display(s):
+    """טקסט לקריאה: משאיר ניקוד ופסוקים, מוריד תגיות HTML, סימני פרשיות וטעמי מקרא."""
+    s = re.sub(r"<[^>]+>", " ", s)
+    s = re.sub(r"&[a-zA-Z#0-9]+;", " ", s)
+    s = re.sub(r"\{[^}]*\}", " ", s)
+    s = re.sub(r"[\u0591-\u05AF\u05C0\u05C4\u05C5]", "", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
 def count_words(s):
     return len(s.split())
 
@@ -114,7 +123,7 @@ def fetch_parsha_verses(ref):
             label = f"{c}:{start + vi}" if m else None
             last = label
             if text:
-                verses.append({"label": label, "text": text})
+                verses.append({"label": label, "text": text, "display": clean_display(v)})
     if not m or last != f"{m.group(3)}:{m.group(4)}":
         for v in verses:
             v["label"] = None
@@ -266,6 +275,37 @@ def write_summary(parsha_he, text, ratio, sections):
     return clean_links(draft, set(ids)), words, target
 
 
+# ---------- הטקסט המלא של הפרשה (בלי Claude, רק העתקה מספריא) ----------
+def text_path(entry_id):
+    return os.path.join(os.path.dirname(DATA), "text", f"{entry_id}.json")
+
+
+def save_text(entry_id, verses):
+    rows = []
+    for v in verses:
+        c = n = None
+        if v["label"]:
+            c, n = (int(x) for x in v["label"].split(":"))
+        rows.append({"c": c, "v": n, "t": v["display"]})
+    path = text_path(entry_id)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(rows, f, ensure_ascii=False, separators=(",", ":"))
+        f.write("\n")
+
+
+def backfill_text(entries):
+    """משלים טקסט מלא לפרשות שכבר בספרייה ועדיין אין להן קובץ טקסט."""
+    for e in entries:
+        if os.path.exists(text_path(e["id"])):
+            continue
+        try:
+            save_text(e["id"], fetch_parsha_verses(e["ref"]))
+            print(f"נוסף טקסט מלא לפרשת {e['he']}")
+        except Exception as ex:
+            print(f"אזהרה: לא הצלחתי להוסיף טקסט לפרשת {e['he']}: {ex}")
+
+
 # ---------- ספרייה ----------
 def make_id(parsha, today):
     slug = re.sub(r"[^a-z0-9]+", "-", parsha["en"].lower()).strip("-")
@@ -279,6 +319,8 @@ def main():
     regenerate = "--regenerate" in sys.argv
     now = datetime.now(TZ)
     today = now.strftime("%A").lower()
+    if not dry:
+        backfill_text(load_entries())
     if not (dry or force or regenerate):
         if today != cfg["publish_day"].strip().lower():
             print(f"היום {today}, יום הפרסום הוא {cfg['publish_day']} — מדלג.")
@@ -327,6 +369,7 @@ def main():
     entries = [e for e in entries if e.get("ref") != parsha["ref"]]
     entries.append(entry)
     save_entries(entries)
+    save_text(entry["id"], verses)
     print(f"נשמר בספרייה ({len(entries)} פרשות).")
     return 0
 

@@ -109,6 +109,13 @@
   }
   .nk { font-family: "Heebo", sans-serif; font-size: .75rem; font-weight: 700; color: var(--accent); margin-inline-end: .6em; letter-spacing: .02em; }
   .up { font-size: .85rem; color: var(--muted); text-decoration: none; }
+  .textwrap { margin-top: 14px; padding-top: 0; border-top: 0; }
+  .textbox { margin-top: 18px; }
+  .chap h4 { font-family: "Frank Ruhl Libre", serif; font-size: 1.25rem; margin: 26px 0 8px; }
+  .tx { font-family: "Frank Ruhl Libre", "Times New Roman", serif; font-size: 1.3rem; line-height: 2.1; margin: 0; }
+  .vn { font-family: "Heebo", sans-serif; font-size: .62em; font-weight: 500; color: var(--accent); margin-inline-start: .15em; }
+  .vs.hl { background: var(--empty); border-radius: 6px; box-shadow: 0 0 0 4px var(--empty); }
+  .dsec a.ref { text-decoration: underline dotted; text-underline-offset: 3px; }
 </style>
 </head>
 <body>
@@ -139,10 +146,76 @@
     return new Date(iso + "T12:00:00").toLocaleDateString("he-IL", { day: "numeric", month: "long", year: "numeric" });
   }
 
+  // ספרות עבריות: 32 -> ל״ב, 15 -> ט״ו
+  function heNum(n) {
+    n = Number(n);
+    if (!n) return "";
+    const ones = ["", "א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט"];
+    const tens = ["", "י", "כ", "ל", "מ", "נ", "ס", "ע", "פ", "צ"];
+    const hund = ["", "ק", "ר", "ש", "ת"];
+    let out = "", hh = Math.floor(n / 100), r = n % 100;
+    while (hh > 4) { out += "ת"; hh -= 4; }
+    out += hund[hh];
+    out += r === 15 ? "טו" : r === 16 ? "טז" : tens[Math.floor(r / 10)] + ones[r % 10];
+    return out.length === 1 ? out + "׳" : out.slice(0, -1) + "״" + out.slice(-1);
+  }
+
+  const BOOKS_HE = { Genesis: "בראשית", Exodus: "שמות", Leviticus: "ויקרא", Numbers: "במדבר", Deuteronomy: "דברים" };
+
+  // "33:18-34:31" -> "לג:יח – לד:לא"
   function fmtRef(r) {
     const m = /^(\d+):(\d+)-(\d+):(\d+)$/.exec(r || "");
     if (!m) return r || "";
-    return m[1] === m[3] ? `${m[1]}:${m[2]}–${m[4]}` : `${m[1]}:${m[2]}–${m[3]}:${m[4]}`;
+    return m[1] === m[3]
+      ? `${heNum(m[1])}:${heNum(m[2])}–${heNum(m[4])}`
+      : `${heNum(m[1])}:${heNum(m[2])} – ${heNum(m[3])}:${heNum(m[4])}`;
+  }
+
+  // "Genesis 32:4-36:43" -> "בראשית לב:ד – לו:מג"
+  function fmtRange(ref) {
+    const m = /^([A-Za-z ]+?)\s+(\d+:\d+-\d+:\d+)$/.exec(ref || "");
+    return m && BOOKS_HE[m[1]] ? `${BOOKS_HE[m[1]]} ${fmtRef(m[2])}` : ref || "";
+  }
+
+  // קישור מטווח הפסוקים של נושא אל הפסוק הראשון בטקסט הפרשה
+  function refLink(e, r) {
+    const m = /^(\d+):(\d+)-(\d+):(\d+)$/.exec(r || "");
+    if (!m) return h("span", { class: "ref" }, r || "");
+    return h("a", { class: "ref", href: "#" + e.id + "-v" + m[1] + "-" + m[2], title: "פתח את הפסוקים בפרשה" }, fmtRef(r));
+  }
+
+  // טקסט הפרשה עצמה: קובץ נפרד לכל פרשה, נטען רק כשפותחים
+  const textCache = new Map();
+
+  function renderText(rows) {
+    const groups = [];
+    for (const r of rows) {
+      let g = groups[groups.length - 1];
+      if (!g || g.c !== r.c) { g = { c: r.c, rows: [] }; groups.push(g); }
+      g.rows.push(r);
+    }
+    return groups.map((g) => h("section", { class: "chap" },
+      g.c ? h("h4", {}, "פרק " + heNum(g.c)) : null,
+      h("p", { class: "tx", lang: "he", dir: "rtl" }, g.rows.map((r) =>
+        h("span", r.c && r.v ? { class: "vs", id: `t-${r.c}-${r.v}` } : { class: "vs" },
+          r.v ? h("sup", { class: "vn" }, heNum(r.v)) : null, " " + r.t + " ")))));
+  }
+
+  function loadText(e, box) {
+    if (box.dataset.loaded) return Promise.resolve();
+    box.replaceChildren(h("p", { class: "none" }, "טוען את הפרשה…"));
+    let p = textCache.get(e.id);
+    if (!p) {
+      p = fetch("text/" + encodeURIComponent(e.id) + ".json", { cache: "no-cache" })
+        .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+      textCache.set(e.id, p);
+    }
+    return p
+      .then((rows) => { box.replaceChildren(...renderText(rows)); box.dataset.loaded = "1"; })
+      .catch(() => {
+        textCache.delete(e.id);
+        box.replaceChildren(h("p", { class: "none" }, "הטקסט של הפרשה עדיין לא זמין כאן. נסה שוב מאוחר יותר."));
+      });
   }
 
   function excerpt(e) {
@@ -252,7 +325,7 @@
     return h("p", {}, p);
   }
 
-  function renderEntry(e, secId) {
+  function renderEntry(e, secId, textOpen) {
     shown = e.id;
     const secs = e.sections || [];
     const paras = String(e.summary || "").split(/\n{2,}/).map((p) => h("p", {}, linked(e, p.trim())));
@@ -262,7 +335,7 @@
       h("p", { class: "meta" },
         fmtDate(e.date), " · ",
         `סיכום של ${e.summary_words} מילים מתוך ${Number(e.words).toLocaleString("he-IL")} בפרשה`, " · ",
-        h("span", { dir: "ltr" }, e.ref)),
+        fmtRange(e.ref)),
       h("div", { class: "body" }, paras),
       h("div", { class: "actions" },
         h("button", { class: "btn ghost", type: "button", onclick: (ev) => shareEntry(e, ev.currentTarget) }, "שתף את הסיכום"),
@@ -274,7 +347,7 @@
         h("nav", { class: "toc", "aria-label": "נושאי ההעמקה" },
           secs.map((s) => h("a", { class: "tocitem", href: secHref(e, s.id) }, s.title))),
         secs.map((s) => h("section", { class: "dsec", id: "sec-" + s.id },
-          h("h3", {}, s.title, s.ref ? h("span", { class: "ref", dir: "ltr" }, fmtRef(s.ref)) : null),
+          h("h3", {}, s.title, s.ref ? refLink(e, s.ref) : null),
           String(s.text || "").split(/\n{2,}/).map((p) => deepPara(p.trim())),
           h("a", { class: "up", href: href(e) }, "↑ חזרה לסיכום"))));
       box.hidden = !secId;
@@ -294,6 +367,26 @@
       };
       children.push(h("div", { class: "deepwrap" }, btn, box));
     }
+    const tbox = h("div", { class: "textbox", id: "ptext" });
+    tbox.hidden = !textOpen;
+    const tlabel = () => (tbox.hidden ? `קרא את הפרשה עצמה · ${fmtRange(e.ref)}` : "הסתר את הפרשה");
+    const tbtn = h("button", {
+      class: "btn ghost deepbtn", type: "button", "aria-expanded": String(!tbox.hidden), "aria-controls": "ptext",
+      onclick: () => {
+        tbox.hidden = !tbox.hidden;
+        tbtn.setAttribute("aria-expanded", String(!tbox.hidden));
+        tbtn.textContent = tlabel();
+        if (!tbox.hidden) tbox._ready = loadText(e, tbox);
+      },
+    }, tlabel());
+    tbox.openText = () => {
+      tbox.hidden = false;
+      tbtn.setAttribute("aria-expanded", "true");
+      tbtn.textContent = tlabel();
+      tbox._ready = loadText(e, tbox);
+    };
+    if (textOpen) tbox._ready = loadText(e, tbox);
+    children.push(h("div", { class: "deepwrap textwrap" }, tbtn, tbox));
     $app.replaceChildren(h("article", {}, children));
   }
 
@@ -316,17 +409,36 @@
     }
     document.title = e ? `פרשת ${e.he} · ספריית הפרשות` : "ספריית הפרשות";
     if (!e) { shown = null; renderLibrary(); window.scrollTo(0, 0); return; }
-    if (sec && !(e.sections || []).some((s) => s.id === sec)) sec = null;
+    const verse = sec && /^v\d+-\d+$/.test(sec) ? sec : null;
+    const wantText = sec === "text" || !!verse;
+    if (sec && !wantText && !(e.sections || []).some((s) => s.id === sec)) sec = null;
     if (shown !== e.id) {
-      renderEntry(e, sec);
+      renderEntry(e, wantText ? null : sec, wantText);
     } else {
       const box = document.getElementById("deep");
-      if (sec && box && box.hidden) box.openDeep();
+      if (sec && !wantText && box && box.hidden) box.openDeep();
+      const tb = document.getElementById("ptext");
+      if (wantText && tb && tb.hidden) tb.openText();
     }
-    // גלילה מיידית (לא חלקה), ושוב אחרי שהפריסה מתייצבת ואחרי טעינת הגופנים
-    const go = () => place(sec ? document.getElementById("sec-" + sec) : null);
+    const target = () => {
+      if (verse) return document.getElementById("t-" + verse.slice(1));
+      if (sec === "text") return document.getElementById("ptext");
+      return sec ? document.getElementById("sec-" + sec) : null;
+    };
+    // גלילה מיידית (לא חלקה), ושוב אחרי שהפריסה מתייצבת, אחרי טעינת הטקסט ואחרי טעינת הגופנים
+    const go = () => {
+      const el = target();
+      if (verse && !el) return;
+      document.querySelectorAll(".vs.hl").forEach((x) => x.classList.remove("hl"));
+      if (verse) el.classList.add("hl");
+      place(el);
+    };
     go();
     requestAnimationFrame(go);
+    if (wantText) {
+      const tb = document.getElementById("ptext");
+      if (tb && tb._ready) tb._ready.then(() => { if (location.hash.replace(/^#/, "") === raw) go(); });
+    }
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(() => { if (location.hash.replace(/^#/, "") === raw) go(); });
     }
